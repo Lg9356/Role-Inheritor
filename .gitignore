@@ -1,0 +1,6 @@
+.history
+.env
+.history
+
+*.code-workspace
+*.json

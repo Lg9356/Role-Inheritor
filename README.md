@@ -1,0 +1,4 @@
+# Role Inheritor
+I think that anyone who has ever had to manage a discord server of any meaningful size and complexity has desired managed role inheritance. Unfortunately, it does not appear that Discord plans on supporting this at any time in the near future. Furthermore, I cannot find ANY third party plugins that support more than one layer of inheritance. Seeing that, I created Role Inheritor. 
+
+This work in progress Bot allows the user to define a database of roles to assign as a hierarchy. This means that, for example, if MOD was a subrole of Member, then when someone was assigned the MOD role, they would automatically also be assigned the Member role. More features to come...
