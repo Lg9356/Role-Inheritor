@@ -18,7 +18,7 @@ Importer = JsonImporter()
 
 load_dotenv()
 
-RootNode = AnyNode(name="", role_id=0)
+RootNode = AnyNode(name="", id=0)
 if os.path.exists('roletree.json'):
     RootNode = Importer.read(open('roletree.json', 'r'))
 
@@ -26,14 +26,32 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 bot = commands.Bot(command_prefix='/', intents=discord.Intents.all())
 
+
+def id_filter(node: AnyNode, id:int) -> bool:
+    try:
+        return node.id == id
+    except:
+        return False
+
+def Handle_ServerNode(RootNode:AnyNode, guild) -> AnyNode:
+    ServerNode = find(RootNode, lambda node: id_filter(node, RootNode.id))
+    
+    if ServerNode is None:
+        ServerNode = AnyNode(name=guild.name, id=guild.id, parent=RootNode.root)
+        Exporter.write(RootNode, open('roletree.json', 'w'))
+    
+    return ServerNode
+
 @bot.command()
 async def RootRole(ctx, action: str, Role: discord.Role = None):
+    ServerNode = Handle_ServerNode(RootNode, ctx.guild)
+
     if action == 'add':
-        if Role.name in [node.name for node in RootNode.children]:
-            await ctx.send(f'ERROR: Root Role {Role.name} already exists.')
+        if Role.id in [node.id for node in ServerNode.children]:
+            await ctx.send(f'ERROR: Root Role {Role.name} already registered.')
             return
         
-        AnyNode(name=Role.name, role_id=Role.id, parent=RootNode.root)
+        AnyNode(name=Role.name, id=Role.id, parent=ServerNode)
         Exporter.write(RootNode, open('roletree.json', 'w'))
         
         await ctx.send(f'Root Role {Role.name} added!')
@@ -42,11 +60,11 @@ async def RootRole(ctx, action: str, Role: discord.Role = None):
         await ctx.send(f'Root Roles: {RootNode.children}')
     
     elif action == 'remove':
-        if Role.name not in [node.name for node in RootNode.children]:
+        if Role.id not in [node.id for node in RootNode.children]:
             await ctx.send(f'ERROR: Root Role {Role.name} not found.')
             return
         
-        RootNode.children = (node for node in RootNode.children if node.name != Role.name)
+        RootNode.children = (node for node in RootNode.children if node.id != Role.id)
         Exporter.write(RootNode, open('roletree.json', 'w'))
         
         await ctx.send(f'Root Role {Role.name} removed!')
@@ -57,10 +75,10 @@ async def RootRole(ctx, action: str, Role: discord.Role = None):
 @bot.command()
 async def Role(ctx, action: str, type1: str, Role1: discord.Role, type2: str, Role2: discord.Role):
     if type1 not in ['parent', 'child']:
-        await ctx.send(f'"{type1}" not recognized!')
+        await ctx.send(f'Action "{type1}" not recognized!')
         return
     elif type2 not in ['parent', 'child']:
-        await ctx.send(f'"{type2}" not recognized!')
+        await ctx.send(f'Action "{type2}" not recognized!')
         return
     elif type1 == type2:
         await ctx.send(f'Role types cannot be the same!')
@@ -73,34 +91,36 @@ async def Role(ctx, action: str, type1: str, Role1: discord.Role, type2: str, Ro
         ParentRole = Role2
         ChildRole = Role1
 
+    ServerNode = Handle_ServerNode(RootNode, ctx.guild)
+
     if action == 'link':
-        ParentNode = find(RootNode, lambda node: node.name == ParentRole.name)
+        ParentNode = find(ServerNode, lambda node: id_filter(node, ParentRole.id))
         if ParentNode is None:
             await ctx.send(f'Parent Role {ParentRole.name} not found!')
             return
         
-        ChildNode = find(RootNode, lambda node: node.name == ChildRole.name)
+        ChildNode = find(ServerNode, lambda node: id_filter(node, ChildRole.id))
         if ChildNode is not None:
             await ctx.send(f'ERROR: Child Role {ChildRole.name} already exists.')
             return
         
-        AnyNode(name=ChildRole.name, role_id=ChildRole.id, parent=ParentNode)
+        AnyNode(name=ChildRole.name, id=ChildRole.id, parent=ParentNode)
         Exporter.write(RootNode, open('roletree.json', 'w'))
         
         await ctx.send(f'Role {ChildRole.name} linked to {ParentRole.name}!')
 
     elif action == 'unlink':
-        ParentNode = find(RootNode, lambda node: node.name == ParentRole.name)
+        ParentNode = find(ServerNode, lambda node: id_filter(node, ParentRole.id))
         if ParentNode is None:
             await ctx.send(f'Parent Role {ParentRole.name} not found!')
             return
         
-        ChildNode = find(ParentNode, lambda node: node.name == ChildRole.name)
+        ChildNode = find(ParentNode, lambda node: id_filter(node, ChildRole.id))
         if ChildNode is None:
             await ctx.send(f'ERROR: Child Role {ChildRole.name} not found under {ParentRole.name}.')
             return
         
-        ParentNode.children = (node for node in ParentNode.children if node.name != ChildRole.name)
+        ParentNode.children = (node for node in ParentNode.children if node.id != ChildRole.id)
         Exporter.write(RootNode, open('roletree.json', 'w'))
         
         await ctx.send(f'Role {ChildRole.name} unlinked from {ParentRole.name}!')
@@ -110,7 +130,8 @@ async def Role(ctx, action: str, type1: str, Role1: discord.Role, type2: str, Ro
 
 @bot.command()
 async def RoleTree(ctx):
-    await ctx.send(f'```{RenderTree(RootNode, style=ContStyle()).by_attr()}```')
+    ServerNode = Handle_ServerNode(RootNode, ctx.guild)
+    await ctx.send(f'```{RenderTree(ServerNode, style=ContStyle()).by_attr()}```')
 
 @bot.command()
 async def UpdateRoles(ctx):
@@ -119,12 +140,10 @@ async def UpdateRoles(ctx):
     Guild = ctx.guild
     async for Member in Guild.fetch_members(limit=None):
         for Role in [Role for Role in Member.roles if Role.name != '@everyone']:
-            RoleNode = find(RootNode, lambda node: node.name == Role.name)
+            RoleNode = find(RootNode, lambda node: id_filter(node, Role.id))
             if RoleNode is not None:
-                for Node in [Node for Node in RoleNode.ancestors if Node.role_id != 0 and Node.name != Role.name]:
-                    await Member.add_roles(Guild.get_role(Node.role_id))
-
-            
+                for Node in [Node for Node in RoleNode.ancestors if Node.id != 0 and Node.name != Role.name and Node.id != Guild.id]:
+                    await Member.add_roles(Guild.get_role(Node.id))
 
     await ctx.send(f'Roll Tree Updated!')
 
