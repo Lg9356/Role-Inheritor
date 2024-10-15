@@ -19,8 +19,8 @@ Importer = JsonImporter()
 load_dotenv()
 
 RootNode = AnyNode(name="", id=0)
-if os.path.exists('roletree.json'):
-    RootNode = Importer.read(open('roletree.json', 'r'))
+if os.path.exists('./roletree.json'):
+    RootNode = Importer.read(open('./roletree.json', 'r'))
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
@@ -38,7 +38,7 @@ def Handle_ServerNode(RootNode:AnyNode, guild) -> AnyNode:
     
     if ServerNode is None:
         ServerNode = AnyNode(name=guild.name, id=guild.id, parent=RootNode.root)
-        Exporter.write(RootNode, open('roletree.json', 'w'))
+        Exporter.write(RootNode, open('./roletree.json', 'w'))
     
     return ServerNode
 
@@ -52,7 +52,7 @@ async def RootRole(ctx, action: str, Role: discord.Role = None):
             return
         
         AnyNode(name=Role.name, id=Role.id, parent=ServerNode)
-        Exporter.write(RootNode, open('roletree.json', 'w'))
+        Exporter.write(RootNode, open('./roletree.json', 'w'))
         
         await ctx.send(f'Root Role {Role.name} added!')
 
@@ -65,7 +65,7 @@ async def RootRole(ctx, action: str, Role: discord.Role = None):
             return
         
         RootNode.children = (node for node in RootNode.children if node.id != Role.id)
-        Exporter.write(RootNode, open('roletree.json', 'w'))
+        Exporter.write(RootNode, open('./roletree.json', 'w'))
         
         await ctx.send(f'Root Role {Role.name} removed!')
     
@@ -105,7 +105,7 @@ async def Role(ctx, action: str, type1: str, Role1: discord.Role, type2: str, Ro
             return
         
         AnyNode(name=ChildRole.name, id=ChildRole.id, parent=ParentNode)
-        Exporter.write(RootNode, open('roletree.json', 'w'))
+        Exporter.write(RootNode, open('./roletree.json', 'w'))
         
         await ctx.send(f'Role {ChildRole.name} linked to {ParentRole.name}!')
 
@@ -121,7 +121,7 @@ async def Role(ctx, action: str, type1: str, Role1: discord.Role, type2: str, Ro
             return
         
         ParentNode.children = (node for node in ParentNode.children if node.id != ChildRole.id)
-        Exporter.write(RootNode, open('roletree.json', 'w'))
+        Exporter.write(RootNode, open('./roletree.json', 'w'))
         
         await ctx.send(f'Role {ChildRole.name} unlinked from {ParentRole.name}!')
 
