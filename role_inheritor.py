@@ -18,6 +18,9 @@ Importer = JsonImporter()
 
 load_dotenv()
 
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+TREE_FILE = os.getenv('TREE_FILE')
+
 if os.path.exists(TREE_FILE):
     print ('Loading Role Tree...')
     RootNode = Importer.read(open(TREE_FILE, 'r'))
@@ -25,9 +28,6 @@ else:
     print ('Creating Role Tree...')
     RootNode = AnyNode(name="", id=0)
     Exporter.write(RootNode, open(TREE_FILE, 'w'))
-
-BOT_TOKEN = os.getenv('BOT_TOKEN')
-TREE_FILE = os.getenv('TREE_FILE')
 
 bot = commands.Bot(command_prefix='/', intents=discord.Intents.all())
 
